@@ -23,13 +23,15 @@
 #include <asm/mach/flash.h>
 #include <asm/hardware/cache-l2x0.h>
 #include <asm/mach/mmc.h>
-#include <mach/rpc_hsusb.h>
-#include <mach/socinfo.h>
+#include <mach/usbdiag.h>
 #include <mach/usb_gadget_fserial.h>
+#include <mach/rpc_hsusb.h>
+#include <asm/setup.h>
+
 #include "devices.h"
 #include "devices-msm7x2xa.h"
 #include "footswitch.h"
-#include "acpuclock.h"
+#include <mach/socinfo.h>
 
 /* Address of GSBI blocks */
 #define MSM_GSBI0_PHYS		0xA1200000
@@ -57,18 +59,6 @@ static struct resource gsbi0_qup_i2c_resources[] = {
 		.start	= INT_PWB_I2C,
 		.end	= INT_PWB_I2C,
 		.flags	= IORESOURCE_IRQ,
-	},
-	{
-		.name	= "i2c_clk",
-		.start	= 60,
-		.end	= 60,
-		.flags	= IORESOURCE_IO,
-	},
-	{
-		.name	= "i2c_sda",
-		.start	= 61,
-		.end	= 61,
-		.flags	= IORESOURCE_IO,
 	},
 };
 
@@ -98,18 +88,6 @@ static struct resource gsbi1_qup_i2c_resources[] = {
 		.start	= INT_ARM11_DMA,
 		.end	= INT_ARM11_DMA,
 		.flags	= IORESOURCE_IRQ,
-	},
-	{
-		.name	= "i2c_clk",
-		.start	= 131,
-		.end	= 131,
-		.flags	= IORESOURCE_IO,
-	},
-	{
-		.name	= "i2c_sda",
-		.start	= 132,
-		.end	= 132,
-		.flags	= IORESOURCE_IO,
 	},
 };
 
@@ -184,18 +162,6 @@ static struct resource resources_hsusb_host[] = {
 	},
 };
 
-static struct usb_gadget_fserial_platform_data fserial_pdata = {
-	.no_ports	= 2,
-};
-
-struct platform_device usb_gadget_fserial_device = {
-	.name	= "usb_fserial",
-	.id	= -1,
-	.dev	= {
-		.platform_data = &fserial_pdata,
-	},
-};
-
 struct platform_device msm_device_hsusb_host = {
 	.name		= "msm_hsusb_host",
 	.id		= 0,
@@ -222,6 +188,29 @@ int msm_add_host(unsigned int host, struct msm_usb_host_platform_data *plat)
 	return platform_device_register(pdev);
 }
 
+struct usb_diag_platform_data usb_diag_pdata = {
+	.ch_name = DIAG_LEGACY,
+	.update_pid_and_serial_num = usb_diag_update_pid_and_serial_num,
+};
+
+struct platform_device usb_diag_device = {
+	.name	= "usb_diag",
+	.id	= -1,
+	.dev	= {
+		.platform_data = &usb_diag_pdata,
+	},
+};
+static struct usb_gadget_fserial_platform_data fserial_pdata = {
+	.no_ports	= 2,
+};
+
+struct platform_device usb_gadget_fserial_device = {
+	.name	= "usb_fserial",
+	.id	= -1,
+	.dev	= {
+		.platform_data = &fserial_pdata,
+	},
+};
 static struct resource msm_dmov_resource[] = {
 	{
 		.start	= INT_ADM_AARM,
@@ -280,6 +269,7 @@ static struct resource resources_uart3[] = {
 		.flags  = IORESOURCE_MEM,
 	},
 };
+
 struct platform_device msm_device_uart1 = {
 	.name	= "msm_serial",
 	.id	= 0,
@@ -357,35 +347,13 @@ static struct resource msm_uart2dm_resources[] = {
 		.end	= INT_UART2DM_IRQ,
 		.flags	= IORESOURCE_IRQ,
 	},
-	{
-		.start = INT_UART2DM_RX,
-		.end   = INT_UART2DM_RX,
-		.flags = IORESOURCE_IRQ,
-	},
-	{
-		.start = DMOV_HSUART2_TX_CHAN,
-		.end   = DMOV_HSUART2_RX_CHAN,
-		.name  = "uartdm_channels",
-		.flags = IORESOURCE_DMA,
-	},
-	{
-		.start = DMOV_HSUART2_TX_CRCI,
-		.end   = DMOV_HSUART2_RX_CRCI,
-		.name  = "uartdm_crci",
-		.flags = IORESOURCE_DMA,
-	},
 };
 
-static u64 msm_uart_dm2_dma_mask = DMA_BIT_MASK(32);
 struct platform_device msm_device_uart_dm2 = {
-	.name	= "msm_serial_hs",
-	.id	= 1,
+	.name	= "msm_serial_hsl",
+	.id	= 0,
 	.num_resources	= ARRAY_SIZE(msm_uart2dm_resources),
 	.resource	= msm_uart2dm_resources,
-	.dev	= {
-		.dma_mask		= &msm_uart_dm2_dma_mask,
-		.coherent_dma_mask	= DMA_BIT_MASK(32),
-	},
 };
 
 #define MSM_NAND_PHYS		0xA0A00000
@@ -460,17 +428,10 @@ static struct resource resources_sdc1[] = {
 		.flags	= IORESOURCE_IRQ,
 	},
 	{
-		.name	= "sdcc_dma_chnl",
-		.start	= DMOV_SDC1_CHAN,
-		.end	= DMOV_SDC1_CHAN,
+		.start	= 8,
+		.end	= 8,
 		.flags	= IORESOURCE_DMA,
 	},
-	{
-		.name	= "sdcc_dma_crci",
-		.start	= DMOV_SDC1_CRCI,
-		.end	= DMOV_SDC1_CRCI,
-		.flags	= IORESOURCE_DMA,
-	}
 };
 
 static struct resource resources_sdc2[] = {
@@ -485,20 +446,12 @@ static struct resource resources_sdc2[] = {
 		.flags	= IORESOURCE_IRQ,
 	},
 	{
-		.name	= "sdcc_dma_chnl",
-		.start	= DMOV_SDC2_CHAN,
-		.end	= DMOV_SDC2_CHAN,
+		.start	= 8,
+		.end	= 8,
 		.flags	= IORESOURCE_DMA,
 	},
-	{
-		.name	= "sdcc_dma_crci",
-		.start	= DMOV_SDC2_CRCI,
-		.end	= DMOV_SDC2_CRCI,
-		.flags	= IORESOURCE_DMA,
-	}
 };
 
-#ifdef CONFIG_ARCH_MSM7X27A
 static struct resource resources_sdc3[] = {
 	{
 		.start	= MSM_SDC3_BASE,
@@ -511,44 +464,11 @@ static struct resource resources_sdc3[] = {
 		.flags	= IORESOURCE_IRQ,
 	},
 	{
-		.name	= "sdcc_dma_chnl",
-		.start	= DMOV_SDC3_CHAN,
-		.end	= DMOV_SDC3_CHAN,
-		.flags	= IORESOURCE_DMA,
-	},
-	{
-		.name	= "sdcc_dma_crci",
-		.start	= DMOV_SDC3_CRCI,
-		.end	= DMOV_SDC3_CRCI,
+		.start	= 8,
+		.end	= 8,
 		.flags	= IORESOURCE_DMA,
 	},
 };
-#else
-static struct resource resources_sdc3[] = {
-	{
-		.start	= MSM_SDC3_BASE,
-		.end	= MSM_SDC3_BASE + SZ_4K - 1,
-		.flags	= IORESOURCE_MEM,
-	},
-	{
-		.start	= INT_SDC3_0,
-		.end	= INT_SDC3_1,
-		.flags	= IORESOURCE_IRQ,
-	},
-	{
-		.name	= "sdcc_dma_chnl",
-		.start	= DMOV_SDC4_CHAN,
-		.end	= DMOV_SDC4_CHAN,
-		.flags	= IORESOURCE_DMA,
-	},
-	{
-		.name	= "sdcc_dma_crci",
-		.start	= DMOV_SDC4_CRCI,
-		.end	= DMOV_SDC4_CRCI,
-		.flags	= IORESOURCE_DMA,
-	},
-};
-#endif
 
 static struct resource resources_sdc4[] = {
 	{
@@ -562,15 +482,8 @@ static struct resource resources_sdc4[] = {
 		.flags	= IORESOURCE_IRQ,
 	},
 	{
-		.name	= "sdcc_dma_chnl",
-		.start	= DMOV_SDC3_CHAN,
-		.end	= DMOV_SDC3_CHAN,
-		.flags	= IORESOURCE_DMA,
-	},
-	{
-		.name	= "sdcc_dma_crci",
-		.start	= DMOV_SDC3_CRCI,
-		.end	= DMOV_SDC3_CRCI,
+		.start	= 8,
+		.end	= 8,
 		.flags	= IORESOURCE_DMA,
 	},
 };
@@ -683,7 +596,7 @@ static struct platform_device msm_lcdc_device = {
 	.name   = "lcdc",
 	.id     = 0,
 };
-#ifdef CONFIG_MSM_KGSL_ADRENO200
+
 static struct resource kgsl_3d0_resources[] = {
 	{
 		.name  = KGSL_3D0_REG_MEMORY,
@@ -700,27 +613,34 @@ static struct resource kgsl_3d0_resources[] = {
 };
 
 static struct kgsl_device_platform_data kgsl_3d0_pdata = {
-	.pwrlevel = {
-		{
-			.gpu_freq = 245760000,
-			.bus_freq = 200000000,
+	.pwr_data = {
+		.pwrlevel = {
+			{
+				.gpu_freq = 245760000,
+				.bus_freq = 200000000,
+			},
+			{
+				.gpu_freq = 133330000,
+				.bus_freq = 0,
+			},
 		},
-		{
-			.gpu_freq = 192000000,
-			.bus_freq = 160000000,
-		},
-		{
-			.gpu_freq = 133330000,
-			.bus_freq = 0,
+		.init_level = 0,
+		.num_levels = 2,
+		.set_grp_async = set_grp_xbar_async,
+		.idle_timeout = HZ/2,
+		.nap_allowed = false,
+	},
+	.clk = {
+		.name = {
+			.clk = "grp_clk",
+			.pclk = "grp_pclk",
 		},
 	},
-	.init_level = 0,
-	.num_levels = 3,
-	.set_grp_async = set_grp_xbar_async,
-	.idle_timeout = HZ,
-	.strtstp_sleepwake = true,
-	.nap_allowed = false,
-	.clk_map = KGSL_CLK_CORE | KGSL_CLK_IFACE | KGSL_CLK_MEM,
+	.imem_clk_name = {
+		.clk = "imem_clk",
+		.pclk = NULL,
+	},
+
 };
 
 struct platform_device msm_kgsl_3d0 = {
@@ -736,14 +656,13 @@ struct platform_device msm_kgsl_3d0 = {
 void __init msm7x25a_kgsl_3d0_init(void)
 {
 	if (cpu_is_msm7x25a() || cpu_is_msm7x25aa()) {
-		kgsl_3d0_pdata.num_levels = 2;
-		kgsl_3d0_pdata.pwrlevel[0].gpu_freq = 133330000;
-		kgsl_3d0_pdata.pwrlevel[0].bus_freq = 160000000;
-		kgsl_3d0_pdata.pwrlevel[1].gpu_freq = 96000000;
-		kgsl_3d0_pdata.pwrlevel[1].bus_freq = 0;
+		kgsl_3d0_pdata.pwr_data.pwrlevel[0].gpu_freq = 133330000;
+		kgsl_3d0_pdata.pwr_data.pwrlevel[0].bus_freq = 160000000;
+		kgsl_3d0_pdata.pwr_data.pwrlevel[1].gpu_freq = 96000000;
+		kgsl_3d0_pdata.pwr_data.pwrlevel[1].bus_freq = 0;
 	}
 }
-#endif
+
 static void __init msm_register_device(struct platform_device *pdev, void *data)
 {
 	int ret;
@@ -798,29 +717,23 @@ struct platform_device led_pdev = {
 	},
 };
 
-struct platform_device asoc_msm_pcm = {
-	.name   = "msm-dsp-audio",
-	.id     = 0,
-};
-
-struct platform_device asoc_msm_dai0 = {
-	.name   = "msm-codec-dai",
-	.id     = 0,
-};
-
-struct platform_device asoc_msm_dai1 = {
-	.name   = "msm-cpu-dai",
-	.id     = 0,
+static struct msm_acpu_clock_platform_data msm7x2x_clock_data = {
+	.acpu_switch_time_us = 50,
+	.max_speed_delta_khz = 400000,
+	.vdd_switch_time_us = 62,
+	.max_axi_khz = 200000,
 };
 
 int __init msm7x2x_misc_init(void)
 {
-	msm_clock_init(&msm7x27a_clock_init_data);
-	if (cpu_is_msm7x27aa())
-		acpuclk_init(&acpuclk_7x27aa_soc_data);
-	else
-		acpuclk_init(&acpuclk_7x27a_soc_data);
+	if (socinfo_init() < 0)
+		pr_err("%s: socinfo_init() failed!\n", __func__);
 
+	if (cpu_is_msm7x27aa())
+		msm7x2x_clock_data.max_speed_delta_khz = 504000;
+
+	msm_clock_init(msm_clocks_7x27a, msm_num_clocks_7x27a);
+	msm_acpu_clock_init(&msm7x2x_clock_data);
 
 	return 0;
 }
@@ -840,16 +753,13 @@ static int __init msm7x27x_cache_init(void)
 	return 0;
 }
 #else
-static int __init msm7x27x_cache_init(void){ return 0; }
+static int __init msm_cache_init(void){ return 0; }
 #endif
 
 void __init msm_common_io_init(void)
 {
 	msm_map_common_io();
 	msm7x27x_cache_init();
-	if (socinfo_init() < 0)
-		pr_err("%s: socinfo_init() failed!\n", __func__);
-
 }
 
 struct platform_device *msm_footswitch_devices[] = {
